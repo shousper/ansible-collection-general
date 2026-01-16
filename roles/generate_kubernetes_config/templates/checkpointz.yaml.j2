@@ -18,6 +18,13 @@ checkpointz:
     className: ingress-nginx-public
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-production
+{% if gen_kubernetes_config_pandamenu_enabled %}
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/configuration-snippet: |
+        sub_filter '</head>' '{{ gen_kubernetes_config_chaos_mesh_pandamenu | default('') }}{{ gen_kubernetes_config_pandamenu_script }}</head>';
+        sub_filter_types text/html;
+        sub_filter_once off;
+{% endif %}
     hosts:
       - host: checkpoint-sync.{{ network_subdomain }}
         paths:
@@ -50,11 +57,9 @@ checkpointz:
           address: {{ default_cl_endpoint }}
           dataProvider: true
 {% for host in (groups['ethereum_node'] + groups['bootnode']) | sort %}
-{% if ((hostvars[host]['inventory_hostname'] | string)[-2:]) == "-1" %}
-{% if hostvars[host]['ethereum_node_cl_supernode_enabled'] is not defined or hostvars[host]['ethereum_node_cl_supernode_enabled'] == True %}
+{% if "-super-" in (hostvars[host]['inventory_hostname'] | string) and ((hostvars[host]['inventory_hostname'] | string)[-2:]) == "-1" %}
         - name: {{ hostvars[host]['inventory_hostname'] }}
-          address: https://<path:/secrets/services/services.enc.yaml#ethereum | jsonPath {.testnets.{{ devnet_name }}-devnets.node_ingress.combined}>@bn.{{ hostvars[host]['inventory_hostname'] }}.{{ network_subdomain }}
+          address: https://<path:/secrets/services/services.enc.yaml#ethereum | jsonPath {.testnets.{{ devnet_name }}-devnets.node_ingress.combined}>@{{ ethereum_node_beacon_prefix }}{{ hostvars[host]['inventory_hostname'] }}.{{ network_server_subdomain }}
           dataProvider: true
-{% endif %}
 {% endif %}
 {% endfor %}

@@ -21,6 +21,14 @@ powfaucet:
     enabled: true
 
     className: ingress-nginx-public
+{% if gen_kubernetes_config_pandamenu_enabled %}
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/configuration-snippet: |
+        sub_filter '</head>' '{{ gen_kubernetes_config_powfaucet_pandamenu | default('') }}{{ gen_kubernetes_config_pandamenu_script }}</head>';
+        sub_filter_types text/html;
+        sub_filter_once off;
+{% endif %}
 
     hosts:
       - host: faucet.{{ network_subdomain }}
@@ -31,7 +39,7 @@ powfaucet:
 
   faucetTitle: "{{ ethereum_network_name }} PoW Faucet"
   faucetPrivkey: "<path:/secrets/services/services.enc.yaml#ethereum | jsonPath {.testnets.{{ devnet_name }}-devnets.faucet_private_key}>"
-  faucetRpcUrl: "{{ default_el_endpoint }}"
+  faucetRpcUrl: "https://<path:/secrets/services/services.enc.yaml#ethereum | jsonPath {.testnets.{{ devnet_name }}-devnets.node_ingress.combined}>@{{ ethereum_node_rpc_prefix }}{{ primary_bootnode }}.{{ network_server_subdomain }}"
   faucetExplorerLink: "https://explorer.{{ network_subdomain }}/tx/{txid}"
   faucetTxGasLimit: 100000
 
@@ -42,3 +50,4 @@ powfaucet:
   faucetRecurringLimitsAmountWei: 500000000000000000000 # 500 ETH
   faucetPowEnabled: true
   faucetPowRewardPerHash: 1000000000000000000 # 1 ETH
+  faucetPowDifficulty: 10
